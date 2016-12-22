@@ -14,7 +14,7 @@ program main
     character(len=32) :: arg
 
     ! read command line argument
-    if (iargc().eq.2) then
+    if (iargc().gt.1) then
         call getarg(1,arg)
         read(arg,"(I)") L
         call getarg(2,arg)
@@ -97,7 +97,22 @@ program main
 
     ! Diagonalization
     call diag_lapack(Hmat, energies)
-        
+
+    ! Dump eigenvalues & eigenvectors
+    open(unit=11,file="energies.dat",form="formatted")
+    do i=1,dimH
+        write(11,"(F20.16)") energies(i)
+    enddo
+    close(11)
+    open(unit=11,file="eigenvectors.dat",form="unformatted")
+    do j=1,dimH
+        do i=1,dimH
+            write(11) Hmat(i,j)
+        enddo
+        write(11,*)
+    enddo
+    close(11)
+
     print *, "End of run"
 contains
     subroutine diag_lapack(Hmat, energies)
@@ -118,11 +133,6 @@ contains
         print *, "<< End of diagonalization"
 
         print *, "DSYEV info = ", info
-        open(unit=11,file="energies.dat",form="formatted")
-        do i=1,dimH
-            write(11,"(F20.16)") energies(i)
-        enddo
-        close(11)
 
     end subroutine diag_lapack
 
