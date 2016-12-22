@@ -104,11 +104,10 @@ program main
         write(11,"(F20.16)") energies(i)
     enddo
     close(11)
-    open(unit=11,file="eigenvectors.dat",form="unformatted")
-    do j=1,dimH
-        do i=1,dimH
-            write(11) Hmat(i,j)
-        enddo
+    ! ground state only
+    open(unit=11,file="ground_state.dat",form="formatted")
+    do i=1,dimH
+        write(11,*) Hmat(i,1)
     enddo
     close(11)
 
