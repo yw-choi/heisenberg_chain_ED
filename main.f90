@@ -1,15 +1,29 @@
 program main
     implicit none
 
-    integer, parameter :: L = 2  ! chain length
-    integer, parameter :: NS = 2 ! 2*S+1 
+    !!! input parameters  !!!
+    integer :: L ! chain length
+    integer :: NS ! 2*S+1 
 
     integer :: dimH  ! size of the Hilbert space = NS^L
-    double precision, allocatable :: Hmat(:,:)
+    double precision, allocatable :: Hmat(:,:), energies(:)
     
     integer :: i,j,is,S_i
     integer, allocatable :: basis(:)
-    double precision :: S, Jex, val
+    double precision :: S, Jex, val, t1, t2
+    character(len=32) :: arg
+
+    ! read command line argument
+    if (iargc().eq.2) then
+        call getarg(1,arg)
+        read(arg,"(I)") L
+        call getarg(2,arg)
+        read(arg,"(I)") NS
+    else
+        ! default values
+        L = 4 ! 4 sites
+        NS = 2 ! s=1/2
+    endif
 
     dimH = NS**L
     S = (NS-1.d0)/2.d0
@@ -20,11 +34,14 @@ program main
     print *, "2*S+1  = ", NS
     print *, "Hamiltonian Size = ", dimH
     allocate(Hmat(dimH,dimH))
+    allocate(energies(dimH))
     allocate(basis(L+1)) ! one basis state. basis(L+1)==basis(1)
 
     Hmat = 0.0d0
 
     ! calculate the matrix element
+    call cpu_time(t1)
+    print *, ">> Bulding Hamiltonian..."
     do j=1,dimH
         ! find j-th basis state
         do is=1,L
@@ -63,15 +80,52 @@ program main
             endif 
         enddo
     enddo
+    call cpu_time(t2)
+    print "(1x,a,f5.2,a)", "Elapsed time = ", (t2-t1)/60.d0, " min."
+    print *, ">> End of Bulding Hamiltonian."
 
-    do i=1,dimH
-        do j=1,dimH
-            write(*,"(F8.2)", advance="no") Hmat(i,j)
-        enddo
-        write(*,*)
-    enddo
-    
+
+    ! Dump Hamiltonian
+    ! open(unit=11, file="H.dat", form="formatted")
+    ! do i=1,dimH
+    !     do j=1,dimH
+    !         write(11, "(F8.2)", advance="no") Hmat(i,j) 
+    !     enddo
+    !     write(11,*)
+    ! enddo
+    ! close(11)
+
+    ! Diagonalization
+    call diag_lapack(Hmat, energies)
+        
+    print *, "End of run"
 contains
+    subroutine diag_lapack(Hmat, energies)
+        double precision :: Hmat(dimH,dimH), energies(dimH)
+
+        integer :: info, lwork
+        double precision, allocatable :: work(:)
+        double precision :: t1, t2
+        integer :: i
+        lwork = 3*dimH-1
+        allocate(work(lwork))
+
+        call cpu_time(t1)
+        print *, ">> Start of diagonalization"
+        call DSYEV( 'V', 'U', dimH, Hmat, dimH, energies, work, lwork, info)
+        call cpu_time(t2)
+        print "(1x,a,f5.2,a)", "Elapsed time = ", (t2-t1)/60.d0, " min."
+        print *, "<< End of diagonalization"
+
+        print *, "DSYEV info = ", info
+        open(unit=11,file="energies.dat",form="formatted")
+        do i=1,dimH
+            write(11,"(F20.16)") energies(i)
+        enddo
+        close(11)
+
+    end subroutine diag_lapack
+
     integer function find_target_basis_index(basis, ip, im) result(i)
         integer :: basis(:), ip, im
         integer :: is
