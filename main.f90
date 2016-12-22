@@ -109,7 +109,6 @@ program main
         do i=1,dimH
             write(11) Hmat(i,j)
         enddo
-        write(11,*)
     enddo
     close(11)
 
